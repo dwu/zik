@@ -21,6 +21,11 @@
 	// Config: Reserved vertical space for calculating scale factor
 	// Can be used e.g. for control placement
 	var reservedHeight = 20;
+	
+	// Config: Background color changes at those fractions of the total
+	// running time
+	var greenUntil = 0.5;
+	var yellowUntil = 0.25;
 
 	var updateTimer;
 	var radius = 250;
@@ -31,6 +36,7 @@
 	var arc = 1;
 	var destDate = 0;
 	var fullCircleVisible = false;
+	var totalRunningTime = 0;
 
 	// Called on load
 	function initClock() {
@@ -51,10 +57,12 @@
 
 	// Start clock
 	function startClock() {
-		arc = 1;
+		resetClock();
+	
 		showTimeUp(false);
 		var now = new Date().getTime();
 		var remainingMinutes = document.getElementById("min").value;
+		totalRunningTime = remainingMinutes;
 
 		if (remainingMinutes > 60) {
 			remainingMinutes = 60;
@@ -112,6 +120,7 @@
 
 		var remainingMinutes = Math.ceil((destDate - now) / (timeScaleFactor * 1000));
 
+		updateColor(remainingMinutes);
 		updateClock(remainingMinutes);
 
 		if (remainingMinutes > 0) {
@@ -146,6 +155,16 @@
 
 	function de_ra(v) {
 		return v * (Math.PI / 180);
+	}
+	
+	function updateColor(remainingMinutes) {
+		if (remainingMinutes == Math.round(greenUntil * totalRunningTime)) {
+			document.getElementById("full-circle").setAttribute("fill", "#FFF200");
+			document.getElementById("segment").setAttribute("fill", "#FFF200");
+		} else if (remainingMinutes == Math.round(yellowUntil * totalRunningTime)) {
+			document.getElementById("full-circle").setAttribute("fill", "#ED1C24");
+			document.getElementById("segment").setAttribute("fill", "#ED1C24");
+		}
 	}
 	</script>
 </head>
@@ -222,8 +241,8 @@
 
 			<!-- Remaining time indicator -->
 			<path id="segment" d="M 0,0"
-				fill="red" fill-opacity="0.5" stroke-linejoin="round" />
-			<circle id="full-circle" cx="0" cy="0" r="250" stroke-width="0" stroke="red" fill-opacity="0.5" fill="red" visibility="hidden" />
+				fill="#B5E61D" fill-opacity="0.5" stroke-linejoin="round" />
+			<circle id="full-circle" cx="0" cy="0" r="250" stroke-width="0" fill-opacity="0.5" fill="#B5E61D" visibility="hidden" />
 
 			<!-- Hand -->
 			<path id="minutes" fill="#202020"
@@ -245,9 +264,9 @@
 				"/>
 
 			<!-- Time's up sign: Hidden on start -->
-			<circle id="stop-circle" cx="0" cy="0" r="230" stroke-width="50" stroke="red" fill-opacity="0.25" fill="red" visibility="hidden" />
-			<line id="stop-l1" x1="163" y1="163" x2="-163" y2="-163" stroke-width="50" stroke="red" visibility="hidden" />
-			<line id="stop-l2" x1="-163" y1="163" x2="163" y2="-163" stroke-width="50" stroke="red" visibility="hidden" />
+			<circle id="stop-circle" cx="0" cy="0" r="230" stroke-width="50" stroke="#ED1C24" fill-opacity="0.25" fill="#ED1C24" visibility="hidden" />
+			<line id="stop-l1" x1="163" y1="163" x2="-163" y2="-163" stroke-width="50" stroke="#ED1C24" visibility="hidden" />
+			<line id="stop-l2" x1="-163" y1="163" x2="163" y2="-163" stroke-width="50" stroke="#ED1C24" visibility="hidden" />
 		</g>
     </svg>
 </div>
