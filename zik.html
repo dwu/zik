@@ -1,8 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC
-    "-//W3C//DTD XHTML 1.1 plus MathML 2.0 plus SVG 1.1//EN"
-    "http://www.w3.org/2002/04/xhtml-math-svg/xhtml-math-svg.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
 <!--
   Based on Stefan Oskamp's Siemens Wall Clock,
   	http://oskamp.dyndns.org/SiemensClock/SVG/
@@ -12,6 +7,8 @@
   License: MIT
   Repo:    https://github.com/dwu/zik
 -->
+<!DOCTYPE html>
+<html>
 <head>
 	<title>ZIK: Zeit-ist-kostbar</title>
 	<script type="text/javascript">
@@ -25,7 +22,7 @@
 	// Can be used e.g. for control placement
 	var reservedHeight = 20;
 
-	var updateTimer = null;
+	var updateTimer;
 	var radius = 250;
 	var startx = 0;
 	var starty = 0;
@@ -33,9 +30,10 @@
 	var finy = radius;
 	var arc = 1;
 	var destDate = 0;
+	var fullCircleVisible = false;
 
 	// Called on load
-	function init() {
+	function initClock() {
 		adaptSize();
 		window.onresize = function() {
 			adaptSize();
@@ -43,18 +41,20 @@
 	}
 
 	// Reset clock and remove update handler
-	function reset() {
+	function resetClock() {
+		arc = 1;
+		document.getElementById("full-circle").setAttribute("visibility", "hidden");
+		showTimeUp(false);
 		clearTimeout(updateTimer);
 		updateClock(0);
-		showTimeUp(false);
 	}
 
 	// Start clock
-	function start() {
+	function startClock() {
 		arc = 1;
 		showTimeUp(false);
-		now = new Date().getTime();
-		remainingMinutes = document.getElementById("min").value;
+		var now = new Date().getTime();
+		var remainingMinutes = document.getElementById("min").value;
 
 		if (remainingMinutes > 60) {
 			remainingMinutes = 60;
@@ -72,14 +72,21 @@
 			arc = 0;
 		}
 		
-		segment = (6 * remainingMinutes) + 90;
+		var segment = (6 * remainingMinutes) + 90;
 		document.getElementById("minutes").setAttribute('transform', 'rotate(' + (90 - segment) + ')');
 
-		if (remainingMinutes > 0) {
-			nextx = Math.cos(de_ra(segment)) * radius;
-			nexty = Math.sin(de_ra(segment)) * radius;
+		if (remainingMinutes == 60) {
+			fullCircleVisible = true;
+			document.getElementById("full-circle").setAttribute("visibility", "visible");
+		} else if (remainingMinutes > 0 && remainingMinutes < 60) {
+			if (fullCircleVisible == true) {
+				fullCircleVisible = false;
+				document.getElementById("full-circle").setAttribute("visibility", "hidden");
+			}
+			var nextx = Math.cos(de_ra(segment)) * radius;
+			var nexty = Math.sin(de_ra(segment)) * radius;
 
-			path = "M " + startx + "," + starty + " l " + finx + "," + (-(finy)) + " a " + radius + "," + radius + " 0 " + arc + ",0 "+ (nextx - finx) + "," + (-(nexty - finy)) + " z";
+			var path = "M " + startx + "," + starty + " l " + finx + "," + (-(finy)) + " a " + radius + "," + radius + " 0 " + arc + ",0 "+ (nextx - finx) + "," + (-(nexty - finy)) + " z";
 			document.getElementById("segment").setAttribute('d', path);
 		} else {
 			document.getElementById("segment").setAttribute('d', "M 0,0");
@@ -88,25 +95,22 @@
 
 	// Show the time's-up notification
 	function showTimeUp(visible) {
-		c = document.getElementById("stop-circle");
-		l1 = document.getElementById("stop-l1");
-		l2 = document.getElementById("stop-l2");
 		if (visible) {
-			c.setAttribute("visibility", "visible");
-			l1.setAttribute("visibility", "visible");
-			l2.setAttribute("visibility", "visible");
+			document.getElementById("stop-circle").setAttribute("visibility", "visible");
+			document.getElementById("stop-l1").setAttribute("visibility", "visible");
+			document.getElementById("stop-l2").setAttribute("visibility", "visible");
 		} else {
-			c.setAttribute("visibility", "hidden");
-			l1.setAttribute("visibility", "hidden");
-			l2.setAttribute("visibility", "hidden");
+			document.getElementById("stop-circle").setAttribute("visibility", "hidden");
+			document.getElementById("stop-l1").setAttribute("visibility", "hidden");
+			document.getElementById("stop-l2").setAttribute("visibility", "hidden");
 		}
 	}
 
 	// Called each second when clock is running
 	function updateHandler() {
-		now = new Date().getTime();
+		var now = new Date().getTime();
 
-		remainingMinutes = Math.ceil((destDate - now) / (timeScaleFactor * 1000));
+		var remainingMinutes = Math.ceil((destDate - now) / (timeScaleFactor * 1000));
 
 		updateClock(remainingMinutes);
 
@@ -121,13 +125,14 @@
 
 	// Scale clock to fill window
 	function adaptSize() {
+		var size;
 		if ((window.innerHeight + reservedHeight) < window.innerWidth) {
 			size = window.innerHeight - reservedHeight;
 		} else {
 			size = window.innerWidth;
 		}
-		translate = Math.round(size / 2);
-		scale = (0.72 / 512) * size;
+		var translate = Math.round(size / 2);
+		var scale = (0.72 / 512) * size;
 
 		document.getElementById("clock").setAttribute("width", size + "px");
 		document.getElementById("clock").setAttribute("height", size + "px");
@@ -144,7 +149,7 @@
 	}
 	</script>
 </head>
-<body onload="javascript:init();" style="font-family: sans-serif;">
+<body onload="javascript:initClock();" style="font-family: sans-serif;">
 <div id="title" style="position: absolute; top: 1em; right: 1em;"><a href="https://github.com/dwu/zik" style="text-decoration:none">ZIK: Zeit-ist-kostbar</a></div>
 <div align="center" id="clock-div">
 	<svg xmlns="http://www.w3.org/2000/svg" id="clock" version="1.1" width="512px" height="512px" viewBox="0 0 512 512" style="display: block;" >
@@ -218,6 +223,7 @@
 			<!-- Remaining time indicator -->
 			<path id="segment" d="M 0,0"
 				fill="red" fill-opacity="0.5" stroke-linejoin="round" />
+			<circle id="full-circle" cx="0" cy="0" r="250" stroke-width="0" stroke="red" fill-opacity="0.5" fill="red" visibility="hidden" />
 
 			<!-- Hand -->
 			<path id="minutes" fill="#202020"
@@ -249,7 +255,7 @@
 <div align="center" id="controls-div" style="position: absolute; bottom: 1em; right: 1em;">
 	<table>
 		<tr><td>Time period:</td><td><input type="text" name="min" id="min"></td></tr>
-		<tr><td colspan="2"><input style="width:50%" type="button" name="start" value="Start" onClick="start()"><input type="button" style="width:50%" name="reset" value="Reset" onClick="reset()"></td></tr>
+		<tr><td colspan="2"><input style="width:50%" type="button" name="start" value="Start" onClick="javascript:startClock();"><input type="button" style="width:50%" name="reset" value="Reset" onClick="javascript:resetClock();"></td></tr>
 	</table>
 </div>
 </body>
