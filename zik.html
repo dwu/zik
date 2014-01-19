@@ -1,281 +1,367 @@
-<!--
-  Based on Stefan Oskamp's Siemens Wall Clock,
-  	http://oskamp.dyndns.org/SiemensClock/SVG/
-	
-  Inspired by Zeller's Clock: http://www.st.cs.uni-saarland.de/zeller/ZellersClock/
-	
-  License: MIT
-  Repo:    https://github.com/dwu/zik
--->
-<!DOCTYPE html>
+<!DOCTYPE HTML>
 <html>
 <head>
 	<title>ZIK: Zeit-ist-kostbar</title>
-	<script type="text/javascript">
-	// Config: Time scale factor
-	// Used for debugging purposes
-	// 60 --> display minutes
-	// 1  --> display seconds
-	var timeScaleFactor = 60;
+	<style>
+		body {
+			margin: 0px;
+			padding: 0px;
+			font-family: Tahoma, sans-serif;
+		}
+		#title {
+			position: absolute; top: 1em; right: 1em;
+			font-size: 16pt;
+		}
+		#controls {
+			position: absolute; bottom: 1em; right: 1em;
+		}
+		a {
+			text-decoration: none;
+			color: #0000FF;
+		}
+		input:invalid {
+			border: 2px solid #ED1C24;
+		}
+		input:valid {
+		}
 
-	// Config: Reserved vertical space for calculating scale factor
-	// Can be used e.g. for control placement
-	var reservedHeight = 20;
+	</style>
+</head>
+<body onload="javascript:initClock();">
+	<div id="container"></div>
 	
-	// Config: Background color changes at those fractions of the total
-	// running time
-	var greenUntil = 0.5;
-	var yellowUntil = 0.25;
+	<div id="title">
+		<a href="https://github.com/dwu/zik">ZIK: Zeit-ist-kostbar</a>
+	</div>
 
-	var updateTimer;
-	var radius = 250;
-	var startx = 0;
-	var starty = 0;
-	var finx = 0;
-	var finy = radius;
-	var arc = 1;
-	var destDate = 0;
-	var fullCircleVisible = false;
-	var totalRunningTime = 0;
+	<div id="controls" >
+        <table>
+            <tr>
+            	<td>Time period:</td>
+            	<td><input type="text" id="min" title="Number between 1 and 60" required autofocus pattern="\d+"></td>
+            </tr>
+            <tr>
+            	<td colspan="2">
+	            	<button style="width:50%" type="button" id="start" onClick="javascript:startClock();">Start</button><button style="width:50%" id="reset" type="button" onClick="javascript:resetClock();">Reset</button>
+	            </td>
+            </tr>
+        </table>
+	</div>
+	
+	<script src="js/kinetic-v5.0.0.min.js"></script>
+	<script defer="defer">
+		// time scale factor
+        // used for debugging purposes
+        // 60 --> display minutes
+        // 1  --> display seconds
+        const timeScaleFactor = 60;
 
-	// Called on load
-	function initClock() {
-		adaptSize();
-		window.onresize = function() {
+        // if true, show a filled arc which changes color
+        // depending on the time remaining 
+        const showBackgroundColor = true;
+		
+		// background color changes at those fractions of the total running time
+        const greenUntil = 0.5;
+        const yellowUntil = 0.25;
+		
+		// size of the unscaled base clock image
+		const basesize = 660;
+		
+		// margin on all edges
+		const margin = 20;
+		
+		// space reserved for controls to prevent scrollbars being shown
+		const reservedForControls = 20;
+		
+		// colors
+		const color = {
+			clockStroke : "#202020",
+			clockFill : "#FFFFFF",
+			red : "#ED1C24",
+			yellow : "#FFF200",
+			green : "#B5E61D",
+			opacity : 0.5
+		}
+
+		// global variabels
+		var stage;
+		var layer;
+		var pointer;
+		var timesupCircle;
+		var timesupCircleFill;
+		var timesupLine1;
+		var timesupLine2;
+		var segment;
+		var updateTimer;
+		var destDate = 0;
+		
+		// conversion deg -> rad
+		Math.radians = function(degrees) {
+		  return degrees * Math.PI / 180;
+		};
+		
+		// conversion rad -> deg
+		Math.degrees = function(radians) {
+		  return radians * 180 / Math.PI;
+		};
+	
+		function adaptSize() {
+			var maxLength = Math.min(window.innerWidth-reservedForControls, window.innerHeight-reservedForControls);
+
+			stage.setWidth(window.innerWidth-reservedForControls);
+			stage.setHeight(window.innerHeight-reservedForControls);
+			
+			var scale = (maxLength - margin*2 - reservedForControls) / basesize;
+			
+			layer.scale({x: scale, y: scale});
+			stage.offset({x : -1 * ((window.innerWidth / 2) + margin - reservedForControls), y: -1 * ((window.innerHeight / 2) + margin - reservedForControls)});
+
+			stage.draw();
+		}
+
+		// called on page load
+        function initClock() {
+			initStage();
 			adaptSize();
-		}
-	}
 
-	// Reset clock and remove update handler
-	function resetClock() {
-		arc = 1;
-		document.getElementById("full-circle").setAttribute("visibility", "hidden");
-		showTimeUp(false);
-		clearTimeout(updateTimer);
-		updateClock(0);
-	}
+			window.onresize = function() {
+				adaptSize();
+			}
 
-	// Start clock
-	function startClock() {
-		resetClock();
-	
-		showTimeUp(false);
-		var now = new Date().getTime();
-		var remainingMinutes = document.getElementById("min").value;
-		totalRunningTime = remainingMinutes;
-
-		if (remainingMinutes > 60) {
-			remainingMinutes = 60;
-		}
-
-		destDate = now + (remainingMinutes * timeScaleFactor * 1000);
-
-		updateTimer = setInterval("updateHandler()", 200);
-		updateHandler();
-	}
-
-	// Update position of hands
-	function updateClock(remainingMinutes) {
-		if (remainingMinutes <= 30) {
-			arc = 0;
+			document.getElementById('min').onkeypress = function(e){
+				if (!e) e = window.event;
+				var keyCode = e.keyCode || e.which;
+				if (keyCode == '13') {
+					startClock();
+				}
+			}
 		}
 		
-		var segment = (6 * remainingMinutes) + 90;
-		document.getElementById("minutes").setAttribute('transform', 'rotate(' + (90 - segment) + ')');
+		// initialize the stage
+		function initStage() {
+			stage = new Kinetic.Stage({
+				container: 'container',
+				width: basesize+margin*2+reservedForControls,
+				height: basesize+margin*2+reservedForControls
+			});
 
-		if (remainingMinutes == 60) {
-			fullCircleVisible = true;
-			document.getElementById("full-circle").setAttribute("visibility", "visible");
-		} else if (remainingMinutes > 0 && remainingMinutes < 60) {
-			if (fullCircleVisible == true) {
-				fullCircleVisible = false;
-				document.getElementById("full-circle").setAttribute("visibility", "hidden");
+			layer = new Kinetic.Layer();
+
+			// clock base circle
+			var clockBaseCircle = new Kinetic.Circle({
+				x: 0,
+				y: 0,
+				radius: 320,
+				fill: color.clockFill,
+				stroke: color.clockStroke,
+				strokeWidth: 30
+			});
+			layer.add(clockBaseCircle);
+
+			// minute indicators on clock base circle
+			drawIndicators(stage, layer);
+
+			// time's-up notification
+			timesupCircleFill = new Kinetic.Circle({
+				x: 0,
+				y: 0,
+				radius: 230,
+				fill: color.red,
+				stroke: color.red,
+				strokeWidth: 50,
+				opacity: color.opacity
+			});
+			timesupCircleFill.hide();
+			layer.add(timesupCircleFill);
+
+			timesupCircle = new Kinetic.Circle({
+				x: 0,
+				y: 0,
+				radius: 233,
+				stroke: color.red,
+				strokeWidth: 50,
+			});
+			timesupCircle.hide();
+			layer.add(timesupCircle);
+
+			timesupLine1 = new Kinetic.Line({
+				points: [163, 163, -163, -163],
+				stroke: color.red,
+				strokeWidth: 50
+			});
+			timesupLine1.hide();
+			layer.add(timesupLine1);
+
+			timesupLine2 = new Kinetic.Line({
+				points: [-163, 163, 163, -163],
+				stroke: color.red,
+				strokeWidth: 50
+			});
+			timesupLine2.hide();
+			layer.add(timesupLine2);
+
+			if (showBackgroundColor) {
+				backgroundArc = new Kinetic.Arc({
+					x: 0,
+					y: 0,
+					innerRadius: 0,
+					outerRadius: 258,
+					fill: color.green,
+					opacity: 0.50,
+					angle: 0,
+					rotationDeg: 0
+				});
+				layer.add(backgroundArc);
 			}
-			var nextx = Math.cos(de_ra(segment)) * radius;
-			var nexty = Math.sin(de_ra(segment)) * radius;
 
-			var path = "M " + startx + "," + starty + " l " + finx + "," + (-(finy)) + " a " + radius + "," + radius + " 0 " + arc + ",0 "+ (nextx - finx) + "," + (-(nexty - finy)) + " z";
-			document.getElementById("segment").setAttribute('d', path);
-		} else {
-			document.getElementById("segment").setAttribute('d', "M 0,0");
+			// hand
+			pointer = new Kinetic.Path({
+				x: 0,
+				y: 0,
+				stroke: color.clockStroke,
+				fill: color.clockStroke,
+				data: 'M0,-250 L-15,-120 L-10,-15 A18,18 0 0 0 -10,15 C-10,22.5 -12.5,47.5 -15,55 A57.5,57.5 0 0 0 15,55 C12.5,47.5 10,22.5 10,15 A18,18 0 0 0 10,-15 L15,-120 Z M-5,-5 A5,5 0 0 1 5,5 A5,5 0 0 1 -5,-5 Z'
+			});
+			layer.add(pointer);
+
+			// add the layer to the stage
+			stage.add(layer);
 		}
-	}
 
-	// Show the time's-up notification
-	function showTimeUp(visible) {
-		if (visible) {
-			document.getElementById("stop-circle").setAttribute("visibility", "visible");
-			document.getElementById("stop-l1").setAttribute("visibility", "visible");
-			document.getElementById("stop-l2").setAttribute("visibility", "visible");
-		} else {
-			document.getElementById("stop-circle").setAttribute("visibility", "hidden");
-			document.getElementById("stop-l1").setAttribute("visibility", "hidden");
-			document.getElementById("stop-l2").setAttribute("visibility", "hidden");
-		}
-	}
-
-	// Called each second when clock is running
-	function updateHandler() {
-		var now = new Date().getTime();
-
-		var remainingMinutes = Math.ceil((destDate - now) / (timeScaleFactor * 1000));
-
-		updateColor(remainingMinutes);
-		updateClock(remainingMinutes);
-
-		if (remainingMinutes > 0) {
-			remainingMinutes = remainingMinutes - 1;
-		} else {
+        // reset clock, remove update handler, cleanup
+        function resetClock() {
 			clearTimeout(updateTimer);
+				
+			showTimeUp(false);
+
+			backgroundArc.setFill(color.green)
+			backgroundArc.setAngle(0);
+			backgroundArc.setRotationDeg(0);
+
 			updateClock(0);
-			showTimeUp(true);
+        }
+		
+		// start clock
+        function startClock() {
+			resetClock();
+
+			var remainingMinutes = parseInt(document.getElementById("min").value) + 1;
+			if (isNaN(remainingMinutes)) {
+				alert("ERROR: Time period has to be a number.");
+				document.getElementById('min').focus();
+				document.getElementById('min').select();
+				return;
+			} else {
+				if (remainingMinutes > 60 || remainingMinutes < 1) {
+					alert("ERROR: Time period has to be a number between 60 an 1");
+					document.getElementById('min').focus();
+					document.getElementById('min').select();
+					return;
+				}
+			}
+
+			document.getElementById('start').focus();
+
+			var now = new Date().getTime();
+			totalRunningTime = remainingMinutes;
+		
+			destDate = now + (remainingMinutes * timeScaleFactor * 1000);
+			
+			updateTimer = setInterval("updateHandler()", 200);
+			updateHandler();
+        }
+		
+		// called every 200ms
+        function updateHandler() {
+			var now = new Date().getTime();
+
+			var remainingMinutes = Math.ceil((destDate - now) / (timeScaleFactor * 1000));
+
+			if (remainingMinutes > 1) {
+				// Clock still running...
+				remainingMinutes = remainingMinutes - 1;
+				updateClock(remainingMinutes);
+			} else {
+				// Time's up...
+				clearTimeout(updateTimer);
+				showTimeUp(true);
+				updateClock(0);
+			}
 		}
-    }
+		
+		// update position of hand
+        function updateClock(remainingMinutes) {
+			updateColor(remainingMinutes);
+			
+			// update hand rotation
+			pointer.setRotationDeg(360 - (360/60) * remainingMinutes);
 
-	// Scale clock to fill window
-	function adaptSize() {
-		var size;
-		if ((window.innerHeight + reservedHeight) < window.innerWidth) {
-			size = window.innerHeight - reservedHeight;
-		} else {
-			size = window.innerWidth;
+			// update colored background arc
+			if (showBackgroundColor) {
+				backgroundArc.setAngle((360/60) * remainingMinutes);
+				backgroundArc.setRotationDeg(-90 +360 - (360/60) * remainingMinutes);
+			}
+
+			layer.draw();
+        }
+		
+        // show time's-up notification
+        function showTimeUp(visible) {
+        	if (visible) {
+        		timesupCircle.show();
+        		timesupCircleFill.show();
+        		timesupLine1.show();
+        		timesupLine2.show();
+        	} else {
+        		timesupCircle.hide();
+        		timesupCircleFill.hide();
+        		timesupLine1.hide();
+        		timesupLine2.hide();
+        	}
+        	layer.draw();
+        }
+
+        // update color of background arc
+		function updateColor(remainingMinutes) {
+			if (typeof(totalRunningTime) != 'undefined') {
+				if (remainingMinutes == Math.floor(greenUntil * totalRunningTime)) {
+					backgroundArc.setFill(color.yellow);
+				} else if (remainingMinutes == Math.floor(yellowUntil * totalRunningTime)) {
+					backgroundArc.setFill(color.red);
+				}	
+			}
 		}
-		var translate = Math.round(size / 2);
-		var scale = (0.72 / 512) * size;
 
-		document.getElementById("clock").setAttribute("width", size + "px");
-		document.getElementById("clock").setAttribute("height", size + "px");
-		document.getElementById("clock").setAttribute("viewBox", "0 0 " + size + " " + size);
-		document.getElementById("hands").setAttribute("transform", "translate(" + translate + "," + translate + ") scale(" + scale + ")");
-	}
-
-	function ra_de(v) {
-		return v * (180 / Math.PI);
-	}
-
-	function de_ra(v) {
-		return v * (Math.PI / 180);
-	}
-	
-	function updateColor(remainingMinutes) {
-		if (remainingMinutes == Math.round(greenUntil * totalRunningTime)) {
-			document.getElementById("full-circle").setAttribute("fill", "#FFF200");
-			document.getElementById("segment").setAttribute("fill", "#FFF200");
-		} else if (remainingMinutes == Math.round(yellowUntil * totalRunningTime)) {
-			document.getElementById("full-circle").setAttribute("fill", "#ED1C24");
-			document.getElementById("segment").setAttribute("fill", "#ED1C24");
+		// draw minute indicators on clock base circle
+		function drawIndicators(stage, layer) {
+			var r1 = 0;
+			var r2 = 0;
+			var sw = 0;
+			var pos = 0
+			while (pos <= 60) {
+				if (pos % 5 == 0) {
+					sw = 20;
+					r1 = 260;
+					r2 = 320;
+				} else {
+					sw = 10;
+					r1 = 280;
+					r2 = 320;
+				}
+				var deg = pos * 6;
+				var rad = Math.radians(deg);
+				var x1 = Math.cos(rad) * r1;
+				var y1 = Math.sin(rad) * r1;
+				var x2 = Math.cos(rad) * r2;
+				var y2 = Math.sin(rad) * r2;
+				layer.add(new Kinetic.Line({
+					points: [x1, -y1, x2, -y2],
+					stroke: '#202020',
+					strokeWidth: sw
+				}));
+				pos = pos + 1;
+			}
 		}
-	}
 	</script>
-</head>
-<body onload="javascript:initClock();" style="font-family: sans-serif;">
-<div id="title" style="position: absolute; top: 1em; right: 1em;"><a href="https://github.com/dwu/zik" style="text-decoration:none">ZIK: Zeit-ist-kostbar</a></div>
-<div align="center" id="clock-div">
-	<svg xmlns="http://www.w3.org/2000/svg" id="clock" version="1.1" width="512px" height="512px" viewBox="0 0 512 512" style="display: block;" >
-		<g id="hands" transform="translate(256, 256) scale(0.72)">
-			<!-- Clock frame -->
-			<circle cx="0" cy="0" r="320" stroke="#202020" stroke-width="30" fill="white" />
-
-			<!-- Minutes-->
-			<line x1="260.0" y1="-0.0" x2="320.0" y2="-0.0" stroke="#202020" stroke-width="20" />
-			<line x1="278.466130703" y1="-29.2679697149" x2="318.247006518" y2="-33.4491082456" stroke="#202020" stroke-width="10" />
-			<line x1="273.881328205" y1="-58.215273429" x2="313.007232235" y2="-66.5317410617" stroke="#202020" stroke-width="10" />
-			<line x1="266.295824563" y1="-86.524758425" x2="304.338085214" y2="-98.8854382" stroke="#202020" stroke-width="10" />
-			<line x1="255.79272814" y1="-113.886260061" x2="292.334546446" y2="-130.155725784" stroke="#202020" stroke-width="10" />
-			<line x1="225.166604984" y1="-130.0" x2="277.128129211" y2="-160.0" stroke="#202020" stroke-width="20" />
-			<line x1="226.524758425" y1="-164.579870642" x2="258.8854382" y2="-188.091280734" stroke="#202020" stroke-width="10" />
-			<line x1="208.080551134" y1="-187.35656978" x2="237.806344153" y2="-214.121794035" stroke="#202020" stroke-width="10" />
-			<line x1="187.35656978" y1="-208.080551134" x2="214.121794035" y2="-237.806344153" stroke="#202020" stroke-width="10" />
-			<line x1="164.579870642" y1="-226.524758425" x2="188.091280734" y2="-258.8854382" stroke="#202020" stroke-width="10" />
-			<line x1="130.0" y1="-225.166604984" x2="160.0" y2="-277.128129211" stroke="#202020" stroke-width="20" />
-			<line x1="113.886260061" y1="-255.79272814" x2="130.155725784" y2="-292.334546446" stroke="#202020" stroke-width="10" />
-			<line x1="86.524758425" y1="-266.295824563" x2="98.8854382" y2="-304.338085214" stroke="#202020" stroke-width="10" />
-			<line x1="58.215273429" y1="-273.881328205" x2="66.5317410617" y2="-313.007232235" stroke="#202020" stroke-width="10" />
-			<line x1="29.2679697149" y1="-278.466130703" x2="33.4491082456" y2="-318.247006518" stroke="#202020" stroke-width="10" />
-			<line x1="1.59204083889e-14" y1="-260.0" x2="1.95943487864e-14" y2="-320.0" stroke="#202020" stroke-width="20" />
-			<line x1="-29.2679697149" y1="-278.466130703" x2="-33.4491082456" y2="-318.247006518" stroke="#202020" stroke-width="10" />
-			<line x1="-58.215273429" y1="-273.881328205" x2="-66.5317410617" y2="-313.007232235" stroke="#202020" stroke-width="10" />
-			<line x1="-86.524758425" y1="-266.295824563" x2="-98.8854382" y2="-304.338085214" stroke="#202020" stroke-width="10" />
-			<line x1="-113.886260061" y1="-255.79272814" x2="-130.155725784" y2="-292.334546446" stroke="#202020" stroke-width="10" />
-			<line x1="-130.0" y1="-225.166604984" x2="-160.0" y2="-277.128129211" stroke="#202020" stroke-width="20" />
-			<line x1="-164.579870642" y1="-226.524758425" x2="-188.091280734" y2="-258.8854382" stroke="#202020" stroke-width="10" />
-			<line x1="-187.35656978" y1="-208.080551134" x2="-214.121794035" y2="-237.806344153" stroke="#202020" stroke-width="10" />
-			<line x1="-208.080551134" y1="-187.35656978" x2="-237.806344153" y2="-214.121794035" stroke="#202020" stroke-width="10" />
-			<line x1="-226.524758425" y1="-164.579870642" x2="-258.8854382" y2="-188.091280734" stroke="#202020" stroke-width="10" />
-			<line x1="-225.166604984" y1="-130.0" x2="-277.128129211" y2="-160.0" stroke="#202020" stroke-width="20" />
-			<line x1="-255.79272814" y1="-113.886260061" x2="-292.334546446" y2="-130.155725784" stroke="#202020" stroke-width="10" />
-			<line x1="-266.295824563" y1="-86.524758425" x2="-304.338085214" y2="-98.8854382" stroke="#202020" stroke-width="10" />
-			<line x1="-273.881328205" y1="-58.215273429" x2="-313.007232235" y2="-66.5317410617" stroke="#202020" stroke-width="10" />
-			<line x1="-278.466130703" y1="-29.2679697149" x2="-318.247006518" y2="-33.4491082456" stroke="#202020" stroke-width="10" />
-			<line x1="-260.0" y1="-3.18408167778e-14" x2="-320.0" y2="-3.91886975727e-14" stroke="#202020" stroke-width="20" />
-			<line x1="-278.466130703" y1="29.2679697149" x2="-318.247006518" y2="33.4491082456" stroke="#202020" stroke-width="10" />
-			<line x1="-273.881328205" y1="58.215273429" x2="-313.007232235" y2="66.5317410617" stroke="#202020" stroke-width="10" />
-			<line x1="-266.295824563" y1="86.524758425" x2="-304.338085214" y2="98.8854382" stroke="#202020" stroke-width="10" />
-			<line x1="-255.79272814" y1="113.886260061" x2="-292.334546446" y2="130.155725784" stroke="#202020" stroke-width="10" />
-			<line x1="-225.166604984" y1="130.0" x2="-277.128129211" y2="160.0" stroke="#202020" stroke-width="20" />
-			<line x1="-226.524758425" y1="164.579870642" x2="-258.8854382" y2="188.091280734" stroke="#202020" stroke-width="10" />
-			<line x1="-208.080551134" y1="187.35656978" x2="-237.806344153" y2="214.121794035" stroke="#202020" stroke-width="10" />
-			<line x1="-187.35656978" y1="208.080551134" x2="-214.121794035" y2="237.806344153" stroke="#202020" stroke-width="10" />
-			<line x1="-164.579870642" y1="226.524758425" x2="-188.091280734" y2="258.8854382" stroke="#202020" stroke-width="10" />
-			<line x1="-130.0" y1="225.166604984" x2="-160.0" y2="277.128129211" stroke="#202020" stroke-width="20" />
-			<line x1="-113.886260061" y1="255.79272814" x2="-130.155725784" y2="292.334546446" stroke="#202020" stroke-width="10" />
-			<line x1="-86.524758425" y1="266.295824563" x2="-98.8854382" y2="304.338085214" stroke="#202020" stroke-width="10" />
-			<line x1="-58.215273429" y1="273.881328205" x2="-66.5317410617" y2="313.007232235" stroke="#202020" stroke-width="10" />
-			<line x1="-29.2679697149" y1="278.466130703" x2="-33.4491082456" y2="318.247006518" stroke="#202020" stroke-width="10" />
-			<line x1="-4.77612251667e-14" y1="260.0" x2="-5.87830463591e-14" y2="320.0" stroke="#202020" stroke-width="20" />
-			<line x1="29.2679697149" y1="278.466130703" x2="33.4491082456" y2="318.247006518" stroke="#202020" stroke-width="10" />
-			<line x1="58.215273429" y1="273.881328205" x2="66.5317410617" y2="313.007232235" stroke="#202020" stroke-width="10" />
-			<line x1="86.524758425" y1="266.295824563" x2="98.8854382" y2="304.338085214" stroke="#202020" stroke-width="10" />
-			<line x1="113.886260061" y1="255.79272814" x2="130.155725784" y2="292.334546446" stroke="#202020" stroke-width="10" />
-			<line x1="130.0" y1="225.166604984" x2="160.0" y2="277.128129211" stroke="#202020" stroke-width="20" />
-			<line x1="164.579870642" y1="226.524758425" x2="188.091280734" y2="258.8854382" stroke="#202020" stroke-width="10" />
-			<line x1="187.35656978" y1="208.080551134" x2="214.121794035" y2="237.806344153" stroke="#202020" stroke-width="10" />
-			<line x1="208.080551134" y1="187.35656978" x2="237.806344153" y2="214.121794035" stroke="#202020" stroke-width="10" />
-			<line x1="226.524758425" y1="164.579870642" x2="258.8854382" y2="188.091280734" stroke="#202020" stroke-width="10" />
-			<line x1="225.166604984" y1="130.0" x2="277.128129211" y2="160.0" stroke="#202020" stroke-width="20" />
-			<line x1="255.79272814" y1="113.886260061" x2="292.334546446" y2="130.155725784" stroke="#202020" stroke-width="10" />
-			<line x1="266.295824563" y1="86.524758425" x2="304.338085214" y2="98.8854382" stroke="#202020" stroke-width="10" />
-			<line x1="273.881328205" y1="58.215273429" x2="313.007232235" y2="66.5317410617" stroke="#202020" stroke-width="10" />
-			<line x1="278.466130703" y1="29.2679697149" x2="318.247006518" y2="33.4491082456" stroke="#202020" stroke-width="10" />
-			<line x1="260.0" y1="6.36816335557e-14" x2="320.0" y2="7.83773951454e-14" stroke="#202020" stroke-width="20" />
-
-			<!-- Remaining time indicator -->
-			<path id="segment" d="M 0,0"
-				fill="#B5E61D" fill-opacity="0.5" stroke-linejoin="round" />
-			<circle id="full-circle" cx="0" cy="0" r="250" stroke-width="0" fill-opacity="0.5" fill="#B5E61D" visibility="hidden" />
-
-			<!-- Hand -->
-			<path id="minutes" fill="#202020"
-				d="
-				M0,-250
-				L-15,-120
-				L-10,-15
-				A18,18 0 0 0 -10,15
-				C-10,22.5 -12.5,47.5 -15,55
-				A57.5,57.5 0 0 0 15,55
-				C12.5,47.5 10,22.5 10,15
-				A18,18 0 0 0 10,-15
-				L15,-120
-				Z
-				M-5,-5
-				A5,5 0 0 1 5,5
-				A5,5 0 0 1 -5,-5
-				Z
-				"/>
-
-			<!-- Time's up sign: Hidden on start -->
-			<circle id="stop-circle" cx="0" cy="0" r="230" stroke-width="50" stroke="#ED1C24" fill-opacity="0.25" fill="#ED1C24" visibility="hidden" />
-			<line id="stop-l1" x1="163" y1="163" x2="-163" y2="-163" stroke-width="50" stroke="#ED1C24" visibility="hidden" />
-			<line id="stop-l2" x1="-163" y1="163" x2="163" y2="-163" stroke-width="50" stroke="#ED1C24" visibility="hidden" />
-		</g>
-    </svg>
-</div>
-
-<div align="center" id="controls-div" style="position: absolute; bottom: 1em; right: 1em;">
-	<table>
-		<tr><td>Time period:</td><td><input type="text" name="min" id="min"></td></tr>
-		<tr><td colspan="2"><input style="width:50%" type="button" name="start" value="Start" onClick="javascript:startClock();"><input type="button" style="width:50%" name="reset" value="Reset" onClick="javascript:resetClock();"></td></tr>
-	</table>
-</div>
 </body>
 </html>

@@ -8,3 +8,5 @@ Based on [Stefan Oskamp's Siemens Wall Clock](http://oskamp.dyndns.org/SiemensCl
 License: MIT
 
 Live-installation at http://zik.flupp.de.
+
+Dependencies (included): [kinetic.js](https://github.com/ericdrowell/KineticJS), [License](https://github.com/ericdrowell/KineticJS/wiki/License)
