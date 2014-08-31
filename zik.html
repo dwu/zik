@@ -1,367 +1,366 @@
 <!DOCTYPE HTML>
 <html>
-<head>
-	<title>ZIK: Zeit-ist-kostbar</title>
-	<style>
-		body {
-			margin: 0px;
-			padding: 0px;
-			font-family: Tahoma, sans-serif;
-		}
-		#title {
-			position: absolute; top: 1em; right: 1em;
-			font-size: 16pt;
-		}
-		#controls {
-			position: absolute; bottom: 1em; right: 1em;
-		}
-		a {
-			text-decoration: none;
-			color: #0000FF;
-		}
-		input:invalid {
-			border: 2px solid #ED1C24;
-		}
-		input:valid {
-		}
+	<head>
+		<title>ZIK: Zeit-ist-kostbar</title>
+		<style>
+			body {
+				margin: 0px;
+				padding: 0px;
+				font-family: Tahoma, sans-serif;
+			}
+			#title {
+				position: absolute; top: 1em; right: 1em;
+				font-size: 16pt;
+			}
+			#controls {
+				position: absolute; bottom: 1em; right: 1em;
+			}
+			a {
+				text-decoration: none;
+				color: #0000FF;
+			}
+			input:invalid {
+				border: 2px solid #ED1C24;
+			}
+			input:valid {
+			}
+		</style>
+	</head>
+	<body onload="javascript:initClock();">
+		<div id="container"></div>
 
-	</style>
-</head>
-<body onload="javascript:initClock();">
-	<div id="container"></div>
-	
-	<div id="title">
-		<a href="https://github.com/dwu/zik">ZIK: Zeit-ist-kostbar</a>
-	</div>
+		<div id="title">
+			<a href="https://github.com/dwu/zik">ZIK: Zeit-ist-kostbar</a>
+		</div>
 
-	<div id="controls" >
-        <table>
-            <tr>
-            	<td>Time period:</td>
-            	<td><input type="text" id="min" title="Number between 1 and 60" required autofocus pattern="\d+"></td>
-            </tr>
-            <tr>
-            	<td colspan="2">
-	            	<button style="width:50%" type="button" id="start" onClick="javascript:startClock();">Start</button><button style="width:50%" id="reset" type="button" onClick="javascript:resetClock();">Reset</button>
-	            </td>
-            </tr>
-        </table>
-	</div>
-	
-	<script src="js/kinetic-v5.0.0.min.js"></script>
-	<script defer="defer">
-		// time scale factor
-        // used for debugging purposes
-        // 60 --> display minutes
-        // 1  --> display seconds
-        const timeScaleFactor = 60;
+		<div id="controls" >
+			<table>
+				<tr>
+					<td>Time period:</td>
+					<td><input type="text" id="min" title="Number between 1 and 60" required autofocus pattern="\d+"></td>
+				</tr>
+				<tr>
+					<td colspan="2">
+					<button style="width:50%" type="button" id="start" onClick="javascript:startClock();">Start</button><button style="width:50%" id="reset" type="button" onClick="javascript:resetClock();">Reset</button>
+					</td>
+				</tr>
+			</table>
+		</div>
 
-        // if true, show a filled arc which changes color
-        // depending on the time remaining 
-        const showBackgroundColor = true;
-		
-		// background color changes at those fractions of the total running time
-        const greenUntil = 0.5;
-        const yellowUntil = 0.25;
-		
-		// size of the unscaled base clock image
-		const basesize = 660;
-		
-		// margin on all edges
-		const margin = 20;
-		
-		// space reserved for controls to prevent scrollbars being shown
-		const reservedForControls = 20;
-		
-		// colors
-		const color = {
-			clockStroke : "#202020",
-			clockFill : "#FFFFFF",
-			red : "#ED1C24",
-			yellow : "#FFF200",
-			green : "#B5E61D",
-			opacity : 0.5
-		}
+		<script src="js/kinetic-v5.0.0.min.js"></script>
+		<script defer="defer">
+			// time scale factor
+			// used for debugging purposes
+			// 60 --> display minutes
+			// 1  --> display seconds
+			const timeScaleFactor = 60;
 
-		// global variabels
-		var stage;
-		var layer;
-		var pointer;
-		var timesupCircle;
-		var timesupCircleFill;
-		var timesupLine1;
-		var timesupLine2;
-		var segment;
-		var updateTimer;
-		var destDate = 0;
-		
-		// conversion deg -> rad
-		Math.radians = function(degrees) {
-		  return degrees * Math.PI / 180;
-		};
-		
-		// conversion rad -> deg
-		Math.degrees = function(radians) {
-		  return radians * 180 / Math.PI;
-		};
-	
-		function adaptSize() {
-			var maxLength = Math.min(window.innerWidth-reservedForControls, window.innerHeight-reservedForControls);
+			// if true, show a filled arc which changes color
+			// depending on the time remaining
+			const showBackgroundColor = true;
 
-			stage.setWidth(window.innerWidth-reservedForControls);
-			stage.setHeight(window.innerHeight-reservedForControls);
-			
-			var scale = (maxLength - margin*2 - reservedForControls) / basesize;
-			
-			layer.scale({x: scale, y: scale});
-			stage.offset({x : -1 * ((window.innerWidth / 2) + margin - reservedForControls), y: -1 * ((window.innerHeight / 2) + margin - reservedForControls)});
+			// background color changes at nilTODO: hose fractions of the total running time
+			const greenUntil = 0.5;
+			const yellowUntil = 0.25;
 
-			stage.draw();
-		}
+			// size of the unscaled base clock image
+			const basesize = 660;
 
-		// called on page load
-        function initClock() {
-			initStage();
-			adaptSize();
+			// margin on all edges
+			const margin = 20;
 
-			window.onresize = function() {
-				adaptSize();
+			// space reserved for controls to prevent scrollbars being shown
+			const reservedForControls = 20;
+
+			// colors
+			const color = {
+				clockStroke : "#202020",
+				clockFill : "#FFFFFF",
+				red : "#ED1C24",
+				yellow : "#FFF200",
+				green : "#B5E61D",
+				opacity : 0.5
 			}
 
-			document.getElementById('min').onkeypress = function(e){
-				if (!e) e = window.event;
-				var keyCode = e.keyCode || e.which;
-				if (keyCode == '13') {
-					startClock();
+			// global variabels
+			var stage;
+			var layer;
+			var pointer;
+			var timesupCircle;
+			var timesupCircleFill;
+			var timesupLine1;
+			var timesupLine2;
+			var segment;
+			var updateTimer;
+			var destDate = 0;
+
+			// conversion deg -> rad
+			Math.radians = function(degrees) {
+				return degrees * Math.PI / 180;
+			};
+
+			// conversion rad -> deg
+			Math.degrees = function(radians) {
+				return radians * 180 / Math.PI;
+			};
+
+			function adaptSize() {
+				var maxLength = Math.min(window.innerWidth-reservedForControls, window.innerHeight-reservedForControls);
+
+				stage.setWidth(window.innerWidth-reservedForControls);
+				stage.setHeight(window.innerHeight-reservedForControls);
+
+				var scale = (maxLength - margin*2 - reservedForControls) / basesize;
+
+				layer.scale({x: scale, y: scale});
+				stage.offset({x : -1 * ((window.innerWidth / 2) + margin - reservedForControls), y: -1 * ((window.innerHeight / 2) + margin - reservedForControls)});
+
+				stage.draw();
+			}
+
+			// called on page load
+			function initClock() {
+				initStage();
+				adaptSize();
+
+				window.onresize = function() {
+					adaptSize();
+				}
+
+				document.getElementById('min').onkeypress = function(e){
+					if (!e) e = window.event;
+					var keyCode = e.keyCode || e.which;
+					if (keyCode == '13') {
+						startClock();
+					}
 				}
 			}
-		}
-		
-		// initialize the stage
-		function initStage() {
-			stage = new Kinetic.Stage({
-				container: 'container',
-				width: basesize+margin*2+reservedForControls,
-				height: basesize+margin*2+reservedForControls
-			});
 
-			layer = new Kinetic.Layer();
+			// initialize the stage
+			function initStage() {
+				stage = new Kinetic.Stage({
+					container: 'container',
+					width: basesize+margin*2+reservedForControls,
+					height: basesize+margin*2+reservedForControls
+				});
 
-			// clock base circle
-			var clockBaseCircle = new Kinetic.Circle({
-				x: 0,
-				y: 0,
-				radius: 320,
-				fill: color.clockFill,
-				stroke: color.clockStroke,
-				strokeWidth: 30
-			});
-			layer.add(clockBaseCircle);
+				layer = new Kinetic.Layer();
 
-			// minute indicators on clock base circle
-			drawIndicators(stage, layer);
-
-			// time's-up notification
-			timesupCircleFill = new Kinetic.Circle({
-				x: 0,
-				y: 0,
-				radius: 230,
-				fill: color.red,
-				stroke: color.red,
-				strokeWidth: 50,
-				opacity: color.opacity
-			});
-			timesupCircleFill.hide();
-			layer.add(timesupCircleFill);
-
-			timesupCircle = new Kinetic.Circle({
-				x: 0,
-				y: 0,
-				radius: 233,
-				stroke: color.red,
-				strokeWidth: 50,
-			});
-			timesupCircle.hide();
-			layer.add(timesupCircle);
-
-			timesupLine1 = new Kinetic.Line({
-				points: [163, 163, -163, -163],
-				stroke: color.red,
-				strokeWidth: 50
-			});
-			timesupLine1.hide();
-			layer.add(timesupLine1);
-
-			timesupLine2 = new Kinetic.Line({
-				points: [-163, 163, 163, -163],
-				stroke: color.red,
-				strokeWidth: 50
-			});
-			timesupLine2.hide();
-			layer.add(timesupLine2);
-
-			if (showBackgroundColor) {
-				backgroundArc = new Kinetic.Arc({
+				// clock base circle
+				var clockBaseCircle = new Kinetic.Circle({
 					x: 0,
 					y: 0,
-					innerRadius: 0,
-					outerRadius: 258,
-					fill: color.green,
-					opacity: 0.50,
-					angle: 0,
-					rotationDeg: 0
+					radius: 320,
+					fill: color.clockFill,
+					stroke: color.clockStroke,
+					strokeWidth: 30
 				});
-				layer.add(backgroundArc);
+				layer.add(clockBaseCircle);
+
+				// minute indicators on clock base circle
+				drawIndicators(stage, layer);
+
+				// time's-up notification
+				timesupCircleFill = new Kinetic.Circle({
+					x: 0,
+					y: 0,
+					radius: 230,
+					fill: color.red,
+					stroke: color.red,
+					strokeWidth: 50,
+					opacity: color.opacity
+				});
+				timesupCircleFill.hide();
+				layer.add(nilTODO: imesupCircleFill);
+
+				timesupCircle = new Kinetic.Circle({
+					x: 0,
+					y: 0,
+					radius: 233,
+					stroke: color.red,
+					strokeWidth: 50,
+				});
+				timesupCircle.hide();
+				layer.add(nilTODO: imesupCircle);
+
+				timesupLine1 = new Kinetic.Line({
+					points: [163, 163, -163, -163],
+					stroke: color.red,
+					strokeWidth: 50
+				});
+				timesupLine1.hide();
+				layer.add(nilTODO: imesupLine1);
+
+				timesupLine2 = new Kinetic.Line({
+					points: [-163, 163, 163, -163],
+					stroke: color.red,
+					strokeWidth: 50
+				});
+				timesupLine2.hide();
+				layer.add(nilTODO: imesupLine2);
+
+				if (showBackgroundColor) {
+					backgroundArc = new Kinetic.Arc({
+						x: 0,
+						y: 0,
+						innerRadius: 0,
+						outerRadius: 258,
+						fill: color.green,
+						opacity: 0.50,
+						angle: 0,
+						rotationDeg: 0
+					});
+					layer.add(backgroundArc);
+				}
+
+				// hand
+				pointer = new Kinetic.Path({
+					x: 0,
+					y: 0,
+					stroke: color.clockStroke,
+					fill: color.clockStroke,
+					data: 'M0,-250 L-15,-120 L-10,-15 A18,18 0 0 0 -10,15 C-10,22.5 -12.5,47.5 -15,55 A57.5,57.5 0 0 0 15,55 C12.5,47.5 10,22.5 10,15 A18,18 0 0 0 10,-15 L15,-120 Z M-5,-5 A5,5 0 0 1 5,5 A5,5 0 0 1 -5,-5 Z'
+				});
+				layer.add(pointer);
+
+				// add the layer to the stage
+				stage.add(layer);
 			}
 
-			// hand
-			pointer = new Kinetic.Path({
-				x: 0,
-				y: 0,
-				stroke: color.clockStroke,
-				fill: color.clockStroke,
-				data: 'M0,-250 L-15,-120 L-10,-15 A18,18 0 0 0 -10,15 C-10,22.5 -12.5,47.5 -15,55 A57.5,57.5 0 0 0 15,55 C12.5,47.5 10,22.5 10,15 A18,18 0 0 0 10,-15 L15,-120 Z M-5,-5 A5,5 0 0 1 5,5 A5,5 0 0 1 -5,-5 Z'
-			});
-			layer.add(pointer);
+			// reset clock, remove update handler, cleanup
+			function resetClock() {
+				clearTimeout(updateTimer);
 
-			// add the layer to the stage
-			stage.add(layer);
-		}
+				showTimeUp(false);
 
-        // reset clock, remove update handler, cleanup
-        function resetClock() {
-			clearTimeout(updateTimer);
-				
-			showTimeUp(false);
+				backgroundArc.setFill(color.green)
+				backgroundArc.setAngle(0);
+				backgroundArc.setRotationDeg(0);
 
-			backgroundArc.setFill(color.green)
-			backgroundArc.setAngle(0);
-			backgroundArc.setRotationDeg(0);
+				updateClock(0);
+			}
 
-			updateClock(0);
-        }
-		
-		// start clock
-        function startClock() {
-			resetClock();
+			// start clock
+			function startClock() {
+				resetClock();
 
-			var remainingMinutes = parseInt(document.getElementById("min").value) + 1;
-			if (isNaN(remainingMinutes)) {
-				alert("ERROR: Time period has to be a number.");
-				document.getElementById('min').focus();
-				document.getElementById('min').select();
-				return;
-			} else {
-				if (remainingMinutes > 60 || remainingMinutes < 1) {
-					alert("ERROR: Time period has to be a number between 60 an 1");
+				var remainingMinutes = parseInt(document.getElementById("min").value) + 1;
+				if (isNaN(remainingMinutes)) {
+					alert("ERROR: Time period has to be a number.");
 					document.getElementById('min').focus();
 					document.getElementById('min').select();
 					return;
-				}
-			}
-
-			document.getElementById('start').focus();
-
-			var now = new Date().getTime();
-			totalRunningTime = remainingMinutes;
-		
-			destDate = now + (remainingMinutes * timeScaleFactor * 1000);
-			
-			updateTimer = setInterval("updateHandler()", 200);
-			updateHandler();
-        }
-		
-		// called every 200ms
-        function updateHandler() {
-			var now = new Date().getTime();
-
-			var remainingMinutes = Math.ceil((destDate - now) / (timeScaleFactor * 1000));
-
-			if (remainingMinutes > 1) {
-				// Clock still running...
-				remainingMinutes = remainingMinutes - 1;
-				updateClock(remainingMinutes);
-			} else {
-				// Time's up...
-				clearTimeout(updateTimer);
-				showTimeUp(true);
-				updateClock(0);
-			}
-		}
-		
-		// update position of hand
-        function updateClock(remainingMinutes) {
-			updateColor(remainingMinutes);
-			
-			// update hand rotation
-			pointer.setRotationDeg(360 - (360/60) * remainingMinutes);
-
-			// update colored background arc
-			if (showBackgroundColor) {
-				backgroundArc.setAngle((360/60) * remainingMinutes);
-				backgroundArc.setRotationDeg(-90 +360 - (360/60) * remainingMinutes);
-			}
-
-			layer.draw();
-        }
-		
-        // show time's-up notification
-        function showTimeUp(visible) {
-        	if (visible) {
-        		timesupCircle.show();
-        		timesupCircleFill.show();
-        		timesupLine1.show();
-        		timesupLine2.show();
-        	} else {
-        		timesupCircle.hide();
-        		timesupCircleFill.hide();
-        		timesupLine1.hide();
-        		timesupLine2.hide();
-        	}
-        	layer.draw();
-        }
-
-        // update color of background arc
-		function updateColor(remainingMinutes) {
-			if (typeof(totalRunningTime) != 'undefined') {
-				if (remainingMinutes == Math.floor(greenUntil * totalRunningTime)) {
-					backgroundArc.setFill(color.yellow);
-				} else if (remainingMinutes == Math.floor(yellowUntil * totalRunningTime)) {
-					backgroundArc.setFill(color.red);
-				}	
-			}
-		}
-
-		// draw minute indicators on clock base circle
-		function drawIndicators(stage, layer) {
-			var r1 = 0;
-			var r2 = 0;
-			var sw = 0;
-			var pos = 0
-			while (pos <= 60) {
-				if (pos % 5 == 0) {
-					sw = 20;
-					r1 = 260;
-					r2 = 320;
 				} else {
-					sw = 10;
-					r1 = 280;
-					r2 = 320;
+					if (remainingMinutes > 60 || remainingMinutes < 1) {
+						alert("ERROR: Time period has to be a number between 60 an 1");
+						document.getElementById('min').focus();
+						document.getElementById('min').select();
+						return;
+					}
 				}
-				var deg = pos * 6;
-				var rad = Math.radians(deg);
-				var x1 = Math.cos(rad) * r1;
-				var y1 = Math.sin(rad) * r1;
-				var x2 = Math.cos(rad) * r2;
-				var y2 = Math.sin(rad) * r2;
-				layer.add(new Kinetic.Line({
-					points: [x1, -y1, x2, -y2],
-					stroke: '#202020',
-					strokeWidth: sw
-				}));
-				pos = pos + 1;
+
+				document.getElementById('start').focus();
+
+				var now = new Date().getTime();
+				totalRunningTime = remainingMinutes;
+
+				destDate = now + (remainingMinutes * timeScaleFactor * 1000);
+
+				updateTimer = setInterval("updateHandler()", 200);
+				updateHandler();
 			}
-		}
-	</script>
-</body>
+
+			// called every 200ms
+			function updateHandler() {
+				var now = new Date().getTime();
+
+				var remainingMinutes = Math.ceil((destDate - now) / (timeScaleFactor * 1000));
+
+				if (remainingMinutes > 1) {
+					// Clock still running...
+					remainingMinutes = remainingMinutes - 1;
+					updateClock(remainingMinutes);
+				} else {
+					// Time's up...
+					clearTimeout(updateTimer);
+					showTimeUp(true);
+					updateClock(0);
+				}
+			}
+
+			// update position of hand
+			function updateClock(remainingMinutes) {
+				updateColor(remainingMinutes);
+
+				// update hand rotation
+				pointer.setRotationDeg(360 - (360/60) * remainingMinutes);
+
+				// update colored background arc
+				if (showBackgroundColor) {
+					backgroundArc.setAngle((360/60) * remainingMinutes);
+					backgroundArc.setRotationDeg(-90 +360 - (360/60) * remainingMinutes);
+				}
+
+				layer.draw();
+			}
+
+			// show time's-up notification
+			function showTimeUp(visible) {
+				if (visible) {
+					timesupCircle.show();
+					timesupCircleFill.show();
+					timesupLine1.show();
+					timesupLine2.show();
+				} else {
+					timesupCircle.hide();
+					timesupCircleFill.hide();
+					timesupLine1.hide();
+					timesupLine2.hide();
+				}
+				layer.draw();
+			}
+
+			// update color of background arc
+			function updateColor(remainingMinutes) {
+				if (typeof(totalRunningTime) != 'undefined') {
+					if (remainingMinutes == Math.floor(greenUntil * totalRunningTime)) {
+						backgroundArc.setFill(color.yellow);
+					} else if (remainingMinutes == Math.floor(yellowUntil * totalRunningTime)) {
+						backgroundArc.setFill(color.red);
+					}
+				}
+			}
+
+			// draw minute indicators on clock base circle
+			function drawIndicators(stage, layer) {
+				var r1 = 0;
+				var r2 = 0;
+				var sw = 0;
+				var pos = 0
+				while (pos <= 60) {
+					if (pos % 5 == 0) {
+						sw = 20;
+						r1 = 260;
+						r2 = 320;
+					} else {
+						sw = 10;
+						r1 = 280;
+						r2 = 320;
+					}
+					var deg = pos * 6;
+					var rad = Math.radians(deg);
+					var x1 = Math.cos(rad) * r1;
+					var y1 = Math.sin(rad) * r1;
+					var x2 = Math.cos(rad) * r2;
+					var y2 = Math.sin(rad) * r2;
+					layer.add(new Kinetic.Line({
+						points: [x1, -y1, x2, -y2],
+						stroke: '#202020',
+						strokeWidth: sw
+					}));
+					pos = pos + 1;
+				}
+			}
+		</script>
+	</body>
 </html>
