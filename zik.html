@@ -251,7 +251,7 @@
 					document.getElementById('min').select();
 					return;
 				} else {
-					if (remainingMinutes > 60 || remainingMinutes < 1) {
+					if (remainingMinutes < 1 || remainingMinutes > 61) {
 						alert("ERROR: Time period has to be a number between 60 an 1");
 						document.getElementById('min').focus();
 						document.getElementById('min').select();
