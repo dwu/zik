@@ -1,6 +1,8 @@
 ZIK: Zeit-ist-kostbar
 =====================
 
+Live setup: http://dwu.github.io/zik/
+
 Count-down Clock inspired by [Zeller's Clock](http://www.st.cs.uni-saarland.de/zeller/ZellersClock/).
 
 Based on [Stefan Oskamp's Siemens Wall Clock](http://oskamp.dyndns.org/SiemensClock/SVG/).
